@@ -89,6 +89,7 @@ function load_mailbox(mailbox) {
       
           // ... do something else with emails ...
           // Each email is rendered in its own box (e.g. as a <div> with a border) that displays who the email is from, what the subject line is, and the timestamp of the email.
+          // When a user clicks on an email, the user is taken to a view where they see the content of that email. Add links to each email.
           const emails_view_div = document.querySelector('#emails-view');
           const table = document.createElement('table'); 
           emails_view_div.append(table);
@@ -111,7 +112,6 @@ function load_mailbox(mailbox) {
           // table_head_row.append(th_3);
           const table_body = document.createElement('tbody');
 
-
           // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of
           for (const email of emails) {
             console.log("Email:", email);            
@@ -129,14 +129,14 @@ function load_mailbox(mailbox) {
             table_row.append(table_data_1);
             table_row.append(table_data_2);
             table_row.append(table_data_3);
-
-            // !!!!!! NOT TESTED YET !!!!!!
+            
             // If the email is unread, it should appear with a white background. 
-            if (email.read === False) {
-              this.table_row.classList.add("table-light");
+            // https://stackoverflow.com/questions/20664000/uncaught-reference-errorfalse-is-not-defined - false must be lowercase
+            if (email.read === false) {
+              table_row.classList.add("table-light");
             } else {
               // If the email has been read, it should appear with a gray background.
-              this.table_row.classList.add("table-secondary");
+              table_row.classList.add("table-secondary");
             }
           }
       })
