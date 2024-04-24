@@ -60,6 +60,41 @@ function compose_email() {
   })  
 }
 
+function view_email(email) {
+  // Make a GET request to /emails/<email_id> to request the email.
+  fetch(`/emails/${email.id}`)
+  .then(response => response.json())
+  .then(email => {
+      // Print email
+      console.log(email);
+
+      // ... do something else with email ...
+      // Get the div to display an email.
+      const email_view_div = document.querySelector('#email-view');
+      // Hide the emails-view and show the email_view_div.
+      document.querySelector('#emails-view').style.display = 'none';
+      email_view_div.style.display = 'block';
+      // Display the email’s sender, recipients, subject, timestamp, and body.                  
+      const h2 = document.createElement('h2');
+      h2.innerHTML = `${email.subject}`;
+      const p1 = document.createElement('p');
+      p1.innerHTML = `From: ${email.sender}`;                 
+      const p2 = document.createElement('p');
+      p2.innerHTML = `To: ${email.recipients}`;  
+      const p3 = document.createElement('p');
+      p3.innerHTML = `Date: ${email.timestamp}`;                 
+      const p4 = document.createElement('p');
+      p4.innerHTML = `${email.body}`;       
+
+      email_view_div.append(h2);
+      email_view_div.append(p1);
+      email_view_div.append(p2);
+      email_view_div.append(p3);
+      email_view_div.append(p4);
+
+  }); 
+}
+
 function load_mailbox(mailbox) {
   
   // Show the mailbox and hide other views
@@ -116,63 +151,44 @@ function load_mailbox(mailbox) {
 
           // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of
           for (const email of emails) {
-            console.log('Email:', email);            
+            // console.log('Email:', email);            
             
             const table_row = document.createElement('tr');
             // When a user clicks on an email, the user is taken to a view where they see the content of that email. Add links to each email.
             const email_link = document.createElement('a');
             // email link needs a url (email) and an argument (id) - https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute
-            email_link.setAttribute('href', 'email' + email.id);
+            // email_link.setAttribute('href', 'email' + email.id);
+            // BOTH email_link.setAttribute() AND email_link.href WORK.
             // https://stackoverflow.com/questions/4689344/how-can-i-add-href-attribute-to-a-link-dynamically-using-javascript
-            // email_link.href = 'email' + email.id;
+            email_link.href = 'email' + email.id;
             // Add event listener (click) to the table row
             table_row.addEventListener('click', function() {
               // console.log('This email was clicked!');
+
               // Clear contents of the email-view div. 
               document.querySelector('#email-view').innerHTML = '';
 
-              // Make a GET request to /emails/<email_id> to request the email.
-              fetch(`/emails/${email.id}`)
-              .then(response => response.json())
-              .then(email => {
-                  // Print email
-                  console.log(email);
-
-                  // ... do something else with email ...
-                  // Get the div to display an email.
-                  const email_view_div = document.querySelector('#email-view');
-                  // Hide the emails_view_div and show the email_view_div.
-                  emails_view_div.style.display = 'none';
-                  email_view_div.style.display = 'block';
-                  // Display the email’s sender, recipients, subject, timestamp, and body.                  
-                  const h2 = document.createElement('h2');
-                  h2.innerHTML = `${email.subject}`;
-                  const p1 = document.createElement('p');
-                  p1.innerHTML = `From: ${email.sender}`;                 
-                  const p2 = document.createElement('p');
-                  p2.innerHTML = `To: ${email.recipients}`;  
-                  const p3 = document.createElement('p');
-                  p3.innerHTML = `Date: ${email.timestamp}`;                 
-                  const p4 = document.createElement('p');
-                  p4.innerHTML = `${email.body}`;       
-
-                  email_view_div.append(h2);
-                  email_view_div.append(p1);
-                  email_view_div.append(p2);
-                  email_view_div.append(p3);
-                  email_view_div.append(p4);
-
-              }); 
-              
-              // Once the email has been clicked on, you should mark the email as read. 
-              // Recall that you can send a PUT request to /emails/<email_id> to update whether an email is read or not.
+              view_email(email);
+        
+              // Once an email has been clicked on, it is marked as read. 
+              // Send a PUT request to /emails/<email_id> to update whether an email is read or not.
               fetch(`/emails/${email.id}`, {
                 method: 'PUT',
                 body: JSON.stringify({
                     read: true
                 })
-              })       
+              })   
             });
+            
+            // If the email is unread, it should appear with a white background. 
+            // https://stackoverflow.com/questions/20664000/uncaught-reference-errorfalse-is-not-defined - false must be lowercase
+            if (email.read === false) {
+              table_row.classList.add('table-light');
+            } else {
+              // If the email has been read, it should appear with a gray background.
+              table_row.classList.add('table-secondary');
+            }    
+
             const table_data_1 = document.createElement('td');
             const table_data_2 = document.createElement('td');
             const table_data_3 = document.createElement('td');
@@ -187,16 +203,7 @@ function load_mailbox(mailbox) {
             table_row.append(table_data_1);
             table_row.append(table_data_2);
             table_row.append(table_data_3);
-            table_row.append(table_data_4);
-
-            // If the email is unread, it should appear with a white background. 
-            // https://stackoverflow.com/questions/20664000/uncaught-reference-errorfalse-is-not-defined - false must be lowercase
-            if (email.read === false) {
-              table_row.classList.add('table-light');
-            } else {
-              // If the email has been read, it should appear with a gray background.
-              table_row.classList.add('table-secondary');
-            }
+            table_row.append(table_data_4);            
           }
       })
       .catch((error) => {
