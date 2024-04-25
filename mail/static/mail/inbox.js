@@ -10,16 +10,38 @@ document.addEventListener('DOMContentLoaded', function() {
   load_mailbox('inbox');
 });
 
-function compose_email() {
+// Add/Pass argument to compose_email to determine if this is a new email or a reply. If it's a reply, certain information will be prefilled. 
+function compose_email(reply, email) {
 
   // Show compose view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#email-view').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'block';
 
   // Clear out composition fields
   document.querySelector('#compose-recipients').value = '';
   document.querySelector('#compose-subject').value = '';
   document.querySelector('#compose-body').value = '';
+
+  // If reply is true...
+  if (reply && email) {
+    // Pre-fill the composition form with the recipient field set to whoever sent the original email.
+    document.querySelector('#compose-recipients').value = email.sender;
+    
+    // Pre-fill the subject line. If the original email had a subject line of foo, the new subject line should be Re: foo. (If the subject line already begins with Re: , no need to add it again.)
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split
+    // console.log('Split \'\':', email.subject.split('')); // Returns [ "R", "e", ":", " ", "B", "o", "o", "k", " ", "I", … ]
+    // console.log('Split \' \':', email.subject.split(' ')); // Returns ["Re:", "Book", "Info" ]
+    if (email.subject.split(' ')[0] === 'Re:') {       
+      // console.log('Contains Re:', email.subject.split(' ')[0] === 'Re:')
+      document.querySelector('#compose-subject').value = email.subject;
+    } else {      
+      document.querySelector('#compose-subject').value = `Re: ${email.subject}`;
+    }
+
+    // Pre-fill the body of the email with a line like "On Jan 1 2020, 12:00 AM foo@example.com wrote:" followed by the original text of the email.
+    document.querySelector('#compose-body').value = `On ${email.timestamp} ${email.sender} wrote: ${email.body}`;
+  }  
 
   // Send email
   // When the 'SubmitQuery' Button is clicked...
@@ -35,6 +57,7 @@ function compose_email() {
   submit_btn.addEventListener('click', (e) => {
     e.preventDefault(); // Prevent form submission
 
+    // Store new email field values in the following variables.
     email_recipients = document.querySelector('#compose-recipients').value;
     email_subject = document.querySelector('#compose-subject').value;
     email_body = document.querySelector('#compose-body').value;
@@ -52,7 +75,7 @@ function compose_email() {
     .then(result => {
       console.log('Result:', result);
       // Once the email has been sent, load the user’s sent mailbox.
-      load_mailbox('sent')
+      load_mailbox('sent');
     })
     .catch((error) => {
       console.log('Error:', error);
@@ -71,8 +94,9 @@ function view_email(email) {
       // ... do something else with email ...
       // Get the div to display an email.
       const email_view_div = document.querySelector('#email-view');
-      // Hide the emails-view and show the email_view_div.
+      // Hide the emails-view and compose-view divs.
       document.querySelector('#emails-view').style.display = 'none';
+      document.querySelector('#compose-view').style.display = 'none';
       email_view_div.style.display = 'block';
       // Display the email’s sender, recipients, subject, timestamp, and body.                  
       const h2 = document.createElement('h2');
@@ -97,14 +121,23 @@ function view_email(email) {
       email_view_div.append(hr);
       email_view_div.append(p5);
 
+      // Allow users to reply to an email. 
+      // Add 'Reply' button.
+      const reply = document.createElement('button');
+      reply.innerHTML = 'Reply';
+      email_view_div.append(reply);
+
+      // When the user clicks the “Reply” button, they should be taken to the email composition form.
+      reply.addEventListener('click', function() {
+        // Pre-fill the composition form with the recipient field set to whoever sent the original email.
+        // Pre-fill the subject line. If the original email had a subject line of foo, the new subject line should be Re: foo. (If the subject line already begins with Re: , no need to add it again.)
+        // Pre-fill the body of the email with a line like "On Jan 1 2020, 12:00 AM foo@example.com wrote:" followed by the original text of the email.
+
+        // Add/Pass argument to compose_email to determine if this is a new email or a reply. If it's a reply, certain information will be prefilled.
+        let reply = true;
+        compose_email(reply, email);
+      });
   }); 
-}
-
-function archive(emails) {
-  // console.log('Archive function:', emails);
-
-  
-
 }
 
 function load_mailbox(mailbox) {
@@ -166,6 +199,7 @@ function load_mailbox(mailbox) {
           // table_head_row.append(th_3);
           const table_body = document.createElement('tbody');
 
+          // Loop over each email and display it on the page (inbox.html).
           // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of
           for (const email of emails) {
             // console.log('Email:', email);            
@@ -186,29 +220,22 @@ function load_mailbox(mailbox) {
               // https://stackoverflow.com/questions/43946330/overlapped-elements-with-onclick-event
               // https://www.w3schools.com/jsref/event_stoppropagation.asp
               // Removes the conflict and stops the table_row event from being triggered.
-              event.stopPropagation();
-            
-            // Add click event to table data to fix conflict
-
-              
-              // const show_email = document.querySelector('.show-email');
-              // show_email.addEventListener('click', function() {
-              // console.log('This email was clicked!');
+              event.stopPropagation();            
 
               // Clear contents of the email-view div. 
               document.querySelector('#email-view').innerHTML = '';
 
               view_email(email);
-        
-              // Once an email has been clicked on, it is marked as read. 
-              // Send a PUT request to /emails/<email_id> to update whether an email is read or not.
-              fetch(`/emails/${email.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    read: true
-                })
-              })   
             });
+
+            // Once an email has been clicked on, it is marked as read. 
+            // Send a PUT request to /emails/<email_id> to update whether an email is read or not.
+            fetch(`/emails/${email.id}`, {
+              method: 'PUT',
+              body: JSON.stringify({
+                  read: true
+              })
+            })   
             
             // If the email is unread, it should appear with a white background. 
             // https://stackoverflow.com/questions/20664000/uncaught-reference-errorfalse-is-not-defined - false must be lowercase
@@ -217,18 +244,12 @@ function load_mailbox(mailbox) {
             } else {
               // If the email has been read, it should appear with a gray background.
               table_row.classList.add('table-secondary');
-            } 
-               
+            }                
 
             const table_data_1 = document.createElement('td');
             const table_data_2 = document.createElement('td');
             const table_data_3 = document.createElement('td');
             const table_data_4 = document.createElement('td');
-            // Add class to trigger show email without conflicting with the archive button.
-            table_data_1.classList.add('show-email');
-            table_data_2.classList.add('show-email');
-            table_data_3.classList.add('show-email');
-            table_data_4.classList.add('show-email');
 
             table_data_1.innerHTML = `${email.sender}`;
             table_data_2.innerHTML = `${email.recipients}`;
@@ -248,11 +269,14 @@ function load_mailbox(mailbox) {
               // Create a button to archive email(s)
               const archive_button = document.createElement('button');
 
-              if (email.archived === false) {
-                archive_button.innerHTML = 'Archive';  
-              } else {
-                archive_button.innerHTML = 'Unarchive';
-              }
+              
+              archive_button.innerHTML = email.archived ? 'Unarchive' : 'Archive';
+              // OR
+              // if (email.archived === false) {
+              //   archive_button.innerHTML = 'Archive';  
+              // } else {
+              //   archive_button.innerHTML = 'Unarchive';
+              // }
 
               // Adding the button to the row causes the click event to trigger the email to display not the inbox.
               table_row.append(archive_button);
@@ -292,7 +316,6 @@ function load_mailbox(mailbox) {
                       load_mailbox('inbox');
                     }
                   )
-
                 }                  
               });
             }
